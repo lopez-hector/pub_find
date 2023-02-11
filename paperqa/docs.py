@@ -63,14 +63,19 @@ class Docs:
         key += suffix
         self.keys.add(key)
 
-        texts, metadata = read_doc(path, citation, key)
+        """
+            texts - list of strings, 
+        """
+        texts, metadata = read_doc(path, citation, key, chunk_chars=4000, overlap=50)
         # loose check to see if document was loaded
         if not disable_check and not maybe_is_text("".join(texts)):
             raise ValueError(
                 f"This does not look like a text document: {path}. Path disable_check to ignore this error."
             )
 
+        # save current doc to class var docs
         self.docs[path] = dict(texts=texts, metadata=metadata, key=key)
+
         if self._faiss_index is not None:
             self._faiss_index.add_texts(texts, metadatas=metadata)
 
@@ -89,24 +94,51 @@ class Docs:
 
     def _build_faiss_index(self):
         if self._faiss_index is None:
+            # self.docs: keys: unique paths values: dict(keys=texts, metadata, key)
+            # use reduce function to concatenate ALL doc texts and metadata from path related dict to list
+            # each entry in list [len == # docs] is a list [len == NoCharsinText / chunk_chars]
             texts = reduce(
                 lambda x, y: x + y, [doc["texts"] for doc in self.docs.values()], []
             )
             metadatas = reduce(
                 lambda x, y: x + y, [doc["metadata"] for doc in self.docs.values()], []
             )
+
+            # build faiss_index
             self._faiss_index = FAISS.from_texts(
                 texts, OpenAIEmbeddings(), metadatas=metadatas
             )
 
     def get_evidence(self, question: str, k: int = 3, max_sources: int = 5):
+        """
+
+        :param question:
+        :param k:
+        :param max_sources:
+        :return:
+                context_str
+                - (author, year): distilled text \n\n ...
+                - Valid Keys: (author, year), ...
+        """
         context = []
         if self._faiss_index is None:
-            self._build_faiss_index()
+            self._build_faiss_index()  # Builds with OpenAIEmbeddings
+
         # want to work through indices but less k
+        # self._faiss_index = FAISS.from_texts(texts, OpenAIEmbeddings(), metadatas=metadatas)
+
+        # this is a method on the FAISS datastore
+        # converts query to OpenAI Embedding, performs search for k nearest neighbors
+        # these docs are filtered
         docs = self._faiss_index.max_marginal_relevance_search(
             question, k=k, fetch_k=5 * k
         )
+
+        """
+            For each nearest neighbor grab the distill relevant information from nearest
+            neighbors using the question/query.
+            CAUTION: Several calls to LLM in this loop
+        """
         for doc in docs:
             c = (
                 doc.metadata["key"],
@@ -117,12 +149,20 @@ class Docs:
                 context.append(c)
             if len(context) == max_sources:
                 break
+
+        """
+            Create context_str
+                - (author, year): distilled text \n\n ...
+                - Valid Keys: (author, year), ...
+        """
         context_str = "\n\n".join(
             [f"{k}: {s}" for k, c, s in context if "Not applicable" not in s]
         )
         valid_keys = [k for k, c, s in context if "Not applicable" not in s]
+
         if len(valid_keys) > 0:
             context_str += "\n\nValid keys: " + ", ".join(valid_keys)
+
         return context_str, {k: c for k, c, s in context}
 
     def query(
@@ -132,8 +172,18 @@ class Docs:
         max_sources: int = 5,
         length_prompt: str = "about 100 words",
     ):
+        """
+        Called after adding documents to class.
+
+        :param query:
+        :param k:
+        :param max_sources:
+        :param length_prompt:
+        :return:
+        """
+
         context_str, citations = self.get_evidence(query, k=k, max_sources=max_sources)
-        bib = dict()
+
         if len(context_str) < 10:
             answer = "I cannot answer this question due to insufficient information."
         else:
@@ -142,6 +192,9 @@ class Docs:
             )[1:]
             if maybe_is_truncated(answer):
                 answer = edit_chain.run(question=query, answer=answer)
+
+        # make bibliography
+        bib = dict()
         for key, citation in citations.items():
             # do check for whole key (so we don't catch Callahan2019a with Callahan2019)
             skey = key.split(" ")[0]
