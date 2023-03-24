@@ -64,7 +64,11 @@ class Docs:
         self.keys.add(key)
 
         """
-            texts - list of strings, 
+            texts - list of strings of length chunk_chars for this document
+            self.docs - dict that contain a dict for each document
+                keys: texts: broken up doc into chunk_chars
+                metadata: describing the chuncks
+                key: author year descriptor
         """
         texts, metadata = read_doc(path, citation, key, chunk_chars=4000, overlap=50)
         # loose check to see if document was loaded
@@ -92,7 +96,16 @@ class Docs:
         self.__dict__.update(state)
         self._faiss_index = FAISS.load_local("faiss_index", OpenAIEmbeddings())
 
+
     def _build_faiss_index(self):
+        """
+            langchain.vectorstores.FAISS
+                from_texts(texts[list], embeddings bases, metadatas)
+               This is a user-friendly interface that:
+               Embeds documents.
+               Creates an in memory docstore.
+               Initializes the FAISS database
+           """
         if self._faiss_index is None:
             # self.docs: keys: unique paths values: dict(keys=texts, metadata, key)
             # use reduce function to concatenate ALL doc texts and metadata from path related dict to list
@@ -170,11 +183,13 @@ class Docs:
         query: str,
         k: int = 5,
         max_sources: int = 5,
+        max_tokens: int = -1,
         length_prompt: str = "about 100 words",
     ):
         """
         Called after adding documents to class.
 
+        :param max_tokens:
         :param query:
         :param k:
         :param max_sources:
@@ -187,7 +202,10 @@ class Docs:
         if len(context_str) < 10:
             answer = "I cannot answer this question due to insufficient information."
         else:
-            answer = qa_chain.run(
+            '''
+                LLM Call - 1 per question answer
+            '''
+            answer = qa_chain(max_tokens=max_tokens).run(
                 question=query, context_str=context_str, length=length_prompt
             )[1:]
             if maybe_is_truncated(answer):
