@@ -130,3 +130,8 @@ dmypy.json
 
 # testing files generated
 *.txt.json
+
+*.xml
+
+# pdf storage
+pdfs/

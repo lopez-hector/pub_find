@@ -5,24 +5,24 @@
 [![PyPI version](https://badge.fury.io/py/paper-qa.svg)](https://badge.fury.io/py/paper-qa)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 
-This is a simple and incomplete package for doing question and answering from
-PDFs or text files (open an issue for more formats). It uses [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings) with a vector DB called [FAISS](https://github.com/facebookresearch/faiss) to embed and search documents. [langchain](https://github.com/hwchase17/langchain) helps
+This is a minimal package for doing question and answering from
+PDFs or text files (which can be raw HTML). It strives to give very good answers, with no hallucinations, by grounding responses with in-text citations. It uses [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings) with a vector DB called [FAISS](https://github.com/facebookresearch/faiss) to embed and search documents. [langchain](https://github.com/hwchase17/langchain) helps
 generate answers.
 
 It uses this process
 
-```
+```text
 embed docs into vectors -> embed query into vector -> search for top k passages in docs
 
 create summary of each passage relevant to query -> put summaries into prompt -> generate answer
 ```
 
-## What's New (v0.0.5)
+## Hugging Face Demo
 
-- Replaced gpt-index since we were doing some custom metadata
-- Now have page numbers directly in references
-- You can now load very large PDFs
-- Focusing now only on txt and PDFs to get better reading capabilities
+[Hugging Face Demo](https://huggingface.co/spaces/whitead/paper-qa)
+
+
+![image](https://user-images.githubusercontent.com/908389/218957863-4aa2fa2c-14cf-4b0d-82fd-bf837f5f550b.png)
 
 ## Example
 
@@ -52,24 +52,31 @@ Make sure you have set your OPENAI_API_KEY environment variable to your [openai 
 
 To use paper-qa, you need to have a list of paths (valid extensions include: .pdf, .txt) and a list of citations (strings) that correspond to the paths. You can then use the `Docs` class to add the documents and then query them.
 
-*This uses a lot of tokens!! About 10-30k tokens per answer + embedding cost (negligible unless many documents used). That is up to $0.50 per answer with current GPT-3 pricing. Use wisely.*
+*This uses a lot of tokens!! About 5-10k tokens per answer + embedding cost (negligible unless many documents used). That is up to $0.02 per answer with current GPT-3 pricing. Use wisely.*
 
 ```python
 
 from paperqa import Docs
 
-# get a list of paths, citations
+# get a list of paths
 
 docs = Docs()
-for d, c in zip(my_docs, my_citations):
-    docs.add(d, c)
-
-# takes ~ 1 min and costs $0.50 to execute this line
+for d in my_docs:
+    docs.add(d)
+    
 answer = docs.query("What manufacturing challenges are unique to bispecific antibodies?")
 print(answer.formatted_answer)
 ```
 
-The answer object has the following attributes: `formatted_answer`, `answer` (answer alone), `question`, `context` (the summaries of passages found for answer), `references` (the docs from which the passages came).
+The answer object has the following attributes: `formatted_answer`, `answer` (answer alone), `question`, `context` (the summaries of passages found for answer), `references` (the docs from which the passages came), and `passages` which contain the raw text of the passages as a dictionary.
+
+## Adjusting number of sources
+
+You can adjust the numbers of sources (passages of text) to reduce token usage or add more context. `k` refers to the top k most relevant and diverse (may from different sources) passages. Each passage is sent to the LLM to summarize, or determine if it is irrelevant. After this step, a limit of `max_sources` is applied so that the final answer can fit into the LLM context window. Thus, `k` > `max_sources`  and `max_sources` is the number of sources used in the final answer.
+
+```python
+docs.query("What manufacturing challenges are unique to bispecific antibodies?", k = 5, max_sources = 2)
+```
 
 ## Where do I get papers?
 
@@ -84,36 +91,39 @@ papers = paperscraper.search_papers(keyword_search)
 docs = paperqa.Docs()
 for path,data in papers.items():
     try:
-        docs.add(path, data['citation'], data['key'])
+        docs.add(path)
     except ValueError as e:
         # sometimes this happens if PDFs aren't downloaded or readable
         print('Could not read', path, e)
-# takes ~ 1 min and costs $0.50 to execute this line
 answer = docs.query("What manufacturing challenges are unique to bispecific antibodies?")
 print(answer.formatted_answer)
 ```
 
-## Adjusting number of sources
-
-You can adjust the numbers of sources/passages to reduce token usage or add more context. `k` controls number of passages to search in each source and `max_sources` controls the number of sources included in the context.
-
-```python
-docs.query("What manufacturing challenges are unique to bispecific antibodies?", k = 1, max_sources = 3)
-```
-
 ## FAQ
 
-### How is this different from gpt-index?
+### How is this different from LlamaIndex?
 
-gpt-index does generate answers, but in a somewhat opinionated way. It doesn't have a great way to track where text comes from and it's not easy to force it to pull from multiple documents. I don't know which way is better, but for writing scholarly text I found it to work better to pull from multiple relevant documents and then generate an answer. I would like to PR to do this to gpt-index but it looks pretty involved right now.
+It's not that different! This is similar to the tree response method in LlamaIndex. I just have included some prompts I find useful, readers that give page numbers/line numbers, and am focused on one tasks - answering technical questions with cited sources.
+
+### How is this different from LangChain?
+
+It's not! We use langchain to abstract the LLMS, and the process is very similar to the `map_reduce` chain in LangChain.
+
+### Caching
+
+This code will cache responses from LLMS by default in `$HOME/.paperqa/llm_cache.db`. Delete this file to clear the cache.
+
+### Can I use different LLMs?
+
+Yes, you can use any LLMs from [langchain](https://langchain.readthedocs.io/) by passing the `llm` argument to the `Docs` class. You can use different LLMs for summarization and for question answering too.
 
 ### Where do the documents come from?
 
-I use some of my own code to pull papers from Google Scholar. This code is not included because it may enable people to violate Google's terms of service and publisher's terms of service.
+You can provide your own. I use some of my own code to pull papers from Google Scholar. This code is not included because it may enable people to violate Google's terms of service and publisher's terms of service.
 
 ### Can I save or load?
 
-The `Docs` class can be pickled and unpickled. This is useful if you want to save the embeddings of the documents and then load them later.
+The `Docs` class can be pickled and unpickled. This is useful if you want to save the embeddings of the documents and then load them later. The database is stored in `$HOME/.paperqa/{name}` where `name` is `default`, or you can pass a `name` when you instantiate the `paperqa` doc object.
 
 ```python
 import pickle

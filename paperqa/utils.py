@@ -3,6 +3,8 @@ import string
 
 
 def maybe_is_text(s, thresh=2.5):
+    if len(s) == 0:
+        return False
     # Calculate the entropy of the string
     entropy = 0
     for c in string.printable:
@@ -12,6 +14,15 @@ def maybe_is_text(s, thresh=2.5):
 
     # Check if the entropy is within a reasonable range for text
     if entropy > thresh:
+        return True
+    return False
+
+
+def maybe_is_code(s):
+    if len(s) == 0:
+        return False
+    # Check if the string contains a lot of non-ascii characters
+    if len([c for c in s if ord(c) > 128]) / len(s) > 0.1:
         return True
     return False
 
@@ -31,3 +42,11 @@ def maybe_is_truncated(s):
     if s[-1] in punct:
         return False
     return True
+
+
+def maybe_is_html(s):
+    if len(s) == 0:
+        return False
+    # check for html tags
+    if "<body" in s or "<html" in s or "<div" in s:
+        return True
