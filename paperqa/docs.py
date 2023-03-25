@@ -126,7 +126,6 @@ class Docs:
             if len(citation) < 3 or "Unknown" in citation or "insufficient" in citation:
                 citation = f"Unknown, {os.path.basename(path)}, {datetime.now().year}"
 
-
         if key is None:
             # get first name and year from citation
             try:
@@ -162,6 +161,41 @@ class Docs:
             )
 
         self.docs[path] = dict(texts=texts, metadata=metadata, key=key)
+        if self._faiss_index is not None:
+            self._faiss_index.add_texts(texts, metadatas=metadata)
+
+    def add_from_embeddings(
+            self,
+            path: str,
+            embeddings: List[List[float]],
+            citation: Optional[str] = None
+
+    ) -> None:
+        """Add a document to the collection."""
+
+        # first check to see if we already have this document
+        # this way we don't make api call to create citation on file we already have
+        if path in self.docs:
+            raise ValueError(f"Document {path} already in collection.")
+
+        suffix = ""
+        while key + suffix in self.keys:
+            # move suffix to next letter
+            if suffix == "":
+                suffix = "a"
+            else:
+                suffix = chr(ord(suffix) + 1)
+        key += suffix
+        self.keys.add(key)
+
+        metadata = dict(
+                        citation=citation,
+                        dockey=key,
+                        key=f"{key} pages {pg}",
+                    )
+        
+        self.docs[path] = dict(texts=texts, metadata=metadata, key=key)
+
         if self._faiss_index is not None:
             self._faiss_index.add_texts(texts, metadatas=metadata)
 

@@ -49,10 +49,13 @@ def _get_datetime():
 
 citation_prompt = prompts.PromptTemplate(
     input_variables=["text"],
-    template="Provide a possible citation for the following text in MLA Format. Today's date is {date}\n"
-    "{text}\n\n"
-    "Citation:",
-    partial_variables={"date": _get_datetime},
+    template="Return a possible citation for the following text. Do not include URLs. "
+             "Citation should be in MLA format. Do not summarize"\
+             "the text. Only return the citation.\n"
+             
+    "text: {text}\n\n"
+    "Citation:"
+    "If a citation cannot be determined from the text return None."
 )
 
 chat_pref = [

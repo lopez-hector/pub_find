@@ -6,7 +6,7 @@ from langchain.text_splitter import TokenTextSplitter
 TextSplitter = TokenTextSplitter
 
 
-def parse_pdf(path, citation, key, chunk_chars=2000, overlap=50):
+def parse_pdf(path, citation, key, chunk_chars=2000, overlap=50, peak=False):
     import pypdf
 
     pdfFileObj = open(path, "rb")
@@ -34,6 +34,8 @@ def parse_pdf(path, citation, key, chunk_chars=2000, overlap=50):
             )
             split = split[chunk_chars - overlap :]
             pages = [str(i + 1)]
+            if peak:
+                return splits[0], None
     if len(split) > overlap:
         splits.append(split[:chunk_chars])
         pg = "-".join([pages[0], pages[-1]])

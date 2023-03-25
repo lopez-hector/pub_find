@@ -2,13 +2,14 @@ import json
 from paperqa import Docs
 import pickle
 import os
-pickle_path = "danielle_docs.pkl"
+pickle_path = "/Users/hectorlopezhernandez/PycharmProjects/paper-qa/h_resources/danielle_docs.pkl"
 ADD = False
 length_prompt = 'about 25 words'
 max_tokens = 50
-citations = json.load(open('Danielle_Papers/citaions_danielle.json'))
+citations = json.load(open('/Users/hectorlopezhernandez/PycharmProjects/paper-qa/h_resources/Danielle_Papers'
+                           '/citaions_danielle.json')) 
 file_paths = []
-query = "Describe a polymer?"
+query = "What is photocrosslinking?"
 
 # instantiate Docs
 if not os.path.exists(pickle_path):
