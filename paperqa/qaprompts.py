@@ -28,7 +28,7 @@ qa_prompt = prompts.PromptTemplate(
     "Use Markdown for formatting code or text, and try to use direct quotes to support arguments.\n\n"
     "{context_str}\n"
     "Question: {question}\n"
-    "Answer: ",
+    "Answer of length {length}: ",
 )
 
 
