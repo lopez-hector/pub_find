@@ -135,3 +135,9 @@ dmypy.json
 
 # pdf storage
 pdfs/
+
+# pkl files
+*.pkl
+
+# Instructor Model
+instructorXL_model

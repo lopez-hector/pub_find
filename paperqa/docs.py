@@ -43,7 +43,6 @@ class Answer:
     tokens: int = 0
     question_embedding: List[float] = None
     from_embed: bool = False
-    print(f'From embed: {from_embed} {question_embedding}')
     def __post_init__(self):
         """Initialize the answer."""
         if self.contexts is None:
