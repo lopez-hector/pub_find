@@ -41,7 +41,8 @@ class Answer:
     formatted_answer: str = ""
     passages: Dict[str, str] = None
     tokens: int = 0
-
+    question_embedding: List[float] = None
+    from_embed: bool = False
     def __post_init__(self):
         """Initialize the answer."""
         if self.contexts is None:
@@ -78,7 +79,7 @@ class Docs:
             index_path: The path to the index file IF pickled. If None, defaults to using name in $HOME/.paperqa/name
             model_name: The name of the model to use assuming OpenAI. Default - gpt-3.5-turbo
         """
-        self.docs = dict()
+        self.docs = dict()  # self.docs[path] = dict(texts=texts, metadata=metadata, key=key)
         self.chunk_size_limit = chunk_size_limit
         self.keys = set()
         self._faiss_index = None
@@ -126,7 +127,6 @@ class Docs:
             if len(citation) < 3 or "Unknown" in citation or "insufficient" in citation:
                 citation = f"Unknown, {os.path.basename(path)}, {datetime.now().year}"
 
-
         if key is None:
             # get first name and year from citation
             try:
@@ -152,8 +152,8 @@ class Docs:
         self.keys.add(key)
 
         texts, metadata = read_doc(path, citation, key, chunk_chars=chunk_chars)
+
         # loose check to see if document was loaded
-        #
         if len("".join(texts)) < 10 or (
             not disable_check and not maybe_is_text("".join(texts))
         ):
@@ -164,6 +164,49 @@ class Docs:
         self.docs[path] = dict(texts=texts, metadata=metadata, key=key)
         if self._faiss_index is not None:
             self._faiss_index.add_texts(texts, metadatas=metadata)
+
+    def add_from_embeddings(
+            self,
+            path: str,
+            texts,
+            text_embeddings: List[float],
+            metadatas
+
+    ) -> None:
+
+        """Add a document to the collection."""
+
+        # first check to see if we already have this document
+        # this way we don't make api call to create citation on file we already have
+        if path in self.docs:
+            raise ValueError(f"Document {path} already in collection.")
+
+        key = metadatas[0]['dockey']
+
+        suffix = ""
+        while key + suffix in self.keys:
+            # move suffix to next letter
+            if suffix == "":
+                suffix = "a"
+            else:
+                suffix = chr(ord(suffix) + 1)
+        key += suffix
+        self.keys.add(key)
+
+        if key != metadatas[0]['dockey']:
+            for j in range(len(metadatas)):
+                metadatas[j]['dockey'] = key
+        
+        self.docs[path] = dict(texts=texts, metadata=metadatas, key=key)
+
+        if self._faiss_index is not None:
+            self._faiss_index.add_embeddings([*zip(texts, text_embeddings)],
+                                             metadatas=metadatas)
+        else:
+            """Instantiate FAISS"""
+            self._faiss_index = FAISS.from_embeddings([*zip(texts, text_embeddings)],
+                                                      metadatas=metadatas,
+                                                      embedding=OpenAIEmbeddings())
 
     def clear(self) -> None:
         """Clear the collection of documents."""
@@ -237,12 +280,17 @@ class Docs:
     ) -> str:
         if self._faiss_index is None:
             self._build_faiss_index()
-
+        print(answer)
         # want to work through indices but less k
         if marginal_relevance:
-            docs = self._faiss_index.max_marginal_relevance_search(
-                answer.question, k=k, fetch_k=5 * k
-            )
+            if not answer.from_embed:
+                docs = self._faiss_index.max_marginal_relevance_search(
+                    answer.question, k=k, fetch_k=5 * k
+                )
+            else:
+                docs = self._faiss_index.max_marginal_relevance_search_by_vector(
+                    answer.question_embedding, k=k, fetch_k=5 * k
+                )
         else:
             docs = self._faiss_index.similarity_search(
                 answer.question, k=k, fetch_k=5 * k
@@ -307,6 +355,7 @@ class Docs:
         max_sources: int = 5,
         length_prompt: str = "about 100 words",
         marginal_relevance: bool = True,
+        embedding: Optional[List[float]] = None
     ):
         for answer in self._query(
             query,
@@ -314,6 +363,7 @@ class Docs:
             max_sources=max_sources,
             length_prompt=length_prompt,
             marginal_relevance=marginal_relevance,
+            embedding=embedding
         ):
             pass
         return answer
@@ -325,11 +375,16 @@ class Docs:
         max_sources: int,
         length_prompt: str,
         marginal_relevance: bool,
+        embedding
     ):
         if k < max_sources:
             raise ValueError("k should be greater than max_sources")
         tokens = 0
-        answer = Answer(query)
+        answer = Answer(query, question_embedding=embedding)
+        if embedding is not None:
+            answer.question_embedding = embedding
+            answer.from_embed = True
+
         with get_openai_callback() as cb:
             for answer in self.get_evidence(
                 answer,

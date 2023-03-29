@@ -1,5 +1,7 @@
 import math
 import string
+from tqdm import tqdm
+from langchain.chains import LLMChain
 
 
 def maybe_is_text(s, thresh=2.5):
@@ -50,3 +52,58 @@ def maybe_is_html(s):
     # check for html tags
     if "<body" in s or "<html" in s or "<div" in s:
         return True
+
+
+from .readers import parse_pdf
+import tiktoken
+
+
+def get_input_tokens(list_of_filenames, model='text-embedding-ada-002'):
+    encoding = tiktoken.encoding_for_model(model)
+    total_tokens = 0
+
+    docs_processed = {}
+
+    for doc in tqdm(list_of_filenames):
+        try:
+            texts, _ = parse_pdf(doc, 'None', 'None', chunk_chars=3000)
+            num_tokens = 0
+            for text in texts:
+                encoded_text = encoding.encode(text)
+                num_tokens += len(encoded_text)
+
+            docs_processed[doc] = num_tokens
+        except:
+            docs_processed[doc] = False
+
+    total_tokens = sum(docs_processed.values())
+
+    return total_tokens, docs_processed
+
+
+from .qaprompts import citation_prompt
+from langchain.llms import OpenAI, OpenAIChat
+
+def get_citations(list_of_filenames):
+    chat_pref = [
+        {
+            "role": "system",
+            "content": "You are a scholarly researcher that answers in an unbiased, scholarly tone. "
+                       "You sometimes refuse to answer if there is insufficient information.",
+        }
+    ]
+    llm = OpenAIChat(temperature=0.1, max_tokens=512, prefix_messages=chat_pref, model_name='gpt-3.5-turbo')
+    cite_chain = LLMChain(prompt=citation_prompt, llm=llm)
+    # peak first chunk
+    path_citation = {}
+    for path in list_of_filenames:
+        texts, _ = parse_pdf(path, "", "", chunk_chars=500, peak=True)
+        print(texts, '\n')
+        citation = cite_chain.run(texts)
+        
+        if len(citation) < 3 or "Unknown" in citation or "insufficient" in citation:
+            citation = f"Unknown, {os.path.basename(path)}, {datetime.now().year}"
+        
+        path_citation[path] = citation
+        
+    return path_citation

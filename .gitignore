@@ -130,3 +130,14 @@ dmypy.json
 
 # testing files generated
 *.txt.json
+
+*.xml
+
+# pdf storage
+pdfs/
+
+# pkl files
+*.pkl
+
+# Instructor Model
+instructorXL_model
