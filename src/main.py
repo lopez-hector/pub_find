@@ -184,7 +184,7 @@ def initialize_docstore(force_rebuild=False):
         print('Embedding')
         # grab model from local or download if needed
 
-        model = get_model(MODEL_ROOT)  # will get model from local if available
+        model = get_model()  # will get model from local if available
 
         path_citations_map = json.load(open(CITATIONS_FILE, 'r'))
         embed_files(model, files_to_embed, path_citations_map)

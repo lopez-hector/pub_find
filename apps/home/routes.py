@@ -6,7 +6,7 @@ from flask import render_template, request, redirect, url_for
 from jinja2 import TemplateNotFound
 from apps.home import blueprint
 import os
-import pickle
+from src.main import get_model, embed_queries, get_answers, initialize_docstore
 
 ROOT_DIRECTORY = './appel'
 FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
@@ -24,12 +24,12 @@ def route_to_index():
 
 @blueprint.route('/index', methods=['POST', 'GET'])
 def index():
-    docs = pickle.load(open(DOCS_FILE, 'rb'))
+    # grab docs if exists, update if pdfs added/deleted, initialize if doesn't exist
+    docs, model = initialize_docstore(force_rebuild=False)
 
     render_args = {'none': 'none'}
 
     if request.method == 'POST':
-        from src.main import get_model, embed_queries, get_answers
 
         queries = [request.form['user_query']]
 
