@@ -1,6 +1,4 @@
 import os
-from sentence_transformers import SentenceTransformer
-import transformers
 from InstructorEmbedding import INSTRUCTOR
 import json
 from tqdm import tqdm
@@ -15,31 +13,9 @@ CITATIONS_FILE = os.path.join(ROOT_DIRECTORY, 'citations.json')
 DOCS_FILE = os.path.join(ROOT_DIRECTORY, 'docs')
 INDEX_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'index')
 MODEL_ROOT = './instructorXL_model'
-# assume that doc-citations map exists
-"""
-* we have embeddings that must be hosted
-    - 100 files, 24 MB Embeddings
-    - 19 MB index
-    - 6.5 MB docs object
-    - 26 kb citations json
-    - 288 MB for pdfs
-1. embed documents
-    a. store embeddings
-
-2. build docs file (embeddings_to_index.py)
-    a. how do we handle storage of
-        i. faiss_index directory
-        ii. docs pkl file
-
-3. allow queries
-    a. embed user query
-    b. doc.query
-
-4. show result
-"""
 
 
-def get_model(model_root):
+def get_model():
     # model_path = os.path.join(model_root, 'model.bin')
     # if not os.path.exists(model_path):
     #     print('getting_model')
@@ -54,7 +30,7 @@ def get_model(model_root):
     # else:
     #     tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path)
 
-    model = INSTRUCTOR('hkunlp/instructor-xl', cache_folder=model_root)
+    model = INSTRUCTOR('hkunlp/instructor-xl', cache_folder=MODEL_ROOT)
 
     return model
 
@@ -265,27 +241,3 @@ def get_answers(docs, queries, question_embeddings):
 
     return answers
 
-
-def main(force_rebuild=False):
-
-    # create a docstore that stays updated with the filesystem
-    # it is rebuilt if pdfs are deleted and items are added when new files are detected
-    docs, model = initialize_docstore(force_rebuild=force_rebuild)
-
-    queries = ['How to prevent wildfires using hydrogels?']
-
-    print('embedding')
-    if not model:
-        model = get_model(MODEL_ROOT)
-    question_embeddings = embed_queries(queries, model)
-
-    print('getting answers')
-    answers = get_answers(docs, queries, question_embeddings)
-
-    for answer in answers:
-        print(answer.formatted_answer)
-
-
-docs, model = initialize_docstore()
-print(len(docs.docs))
-# main(force_rebuild=True)

@@ -2,6 +2,7 @@ import math
 import string
 from tqdm import tqdm
 from langchain.chains import LLMChain
+import os, datetime
 
 
 def maybe_is_text(s, thresh=2.5):
@@ -84,6 +85,7 @@ def get_input_tokens(list_of_filenames, model='text-embedding-ada-002'):
 from .qaprompts import citation_prompt
 from langchain.llms import OpenAI, OpenAIChat
 
+
 def get_citations(list_of_filenames):
     chat_pref = [
         {
@@ -100,10 +102,10 @@ def get_citations(list_of_filenames):
         texts, _ = parse_pdf(path, "", "", chunk_chars=500, peak=True)
         print(texts, '\n')
         citation = cite_chain.run(texts)
-        
+
         if len(citation) < 3 or "Unknown" in citation or "insufficient" in citation:
             citation = f"Unknown, {os.path.basename(path)}, {datetime.now().year}"
-        
+
         path_citation[path] = citation
-        
+
     return path_citation

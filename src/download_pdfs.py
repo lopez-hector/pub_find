@@ -4,11 +4,13 @@ import os
 import tqdm
 
 import pypdf
+ROOT_DIRECTORY = './appel'
+FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
 
-url = 'http://www.supramolecularbiomaterials.com/pubs'
+url = ''
 # create a directory to store the downloaded files
-if not os.path.exists('pdfs'):
-    os.makedirs('pdfs')
+if not os.path.exists(FILE_DIRECTORY):
+    os.makedirs(FILE_DIRECTORY)
 
 # send a GET request to the URL
 response = requests.get(url)
@@ -18,10 +20,10 @@ soup = BeautifulSoup(response.content, 'html.parser')
 
 # find all links to PDF files
 pdf_links = soup.find_all('a', href=lambda href: href.endswith('.pdf'))
-pdf_paths = set(os.path.join('pdfs', pdf_link['href'].split('/')[-1]) for pdf_link in pdf_links)
+pdf_paths = set(os.path.join(FILE_DIRECTORY, pdf_link['href'].split('/')[-1]) for pdf_link in pdf_links)
 
 # compare to existing directory
-existing_pdfs = set(os.path.join('pdfs', f) for f in os.listdir('pdfs'))
+existing_pdfs = set(os.path.join(FILE_DIRECTORY, f) for f in os.listdir(FILE_DIRECTORY))
 from copy import copy
 for file in copy(existing_pdfs):
     
@@ -34,8 +36,6 @@ for file in copy(existing_pdfs):
 remaining_files_to_download = pdf_paths.difference(existing_pdfs)
 print(f'Corrupted files: {remaining_files_to_download}\n{len(remaining_files_to_download)}')
 
-
-# http://www.supramolecularbiomaterials.com/s/Chan_JBMRA_2023.pdf
 # download each PDF file
 for pdf_path in remaining_files_to_download:
     # print(link)
@@ -49,7 +49,7 @@ for pdf_path in remaining_files_to_download:
 
 
 # compare to existing directory
-existing_pdfs = set(os.path.join('pdfs', f) for f in os.listdir('pdfs'))
+existing_pdfs = set(os.path.join(FILE_DIRECTORY, f) for f in os.listdir(FILE_DIRECTORY))
 
 for file in copy(existing_pdfs):
 

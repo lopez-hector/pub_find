@@ -1,8 +1,13 @@
 from paperqa.utils import get_citations
 import os
 import json
-path = 'appel_citations.json'
-files = [os.path.join('pdfs', f) for f in os.listdir('pdfs')]
+
+ROOT_DIRECTORY = ' '
+FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
+CITATIONS_FILE = os.path.join(ROOT_DIRECTORY, 'citations.json')
+
+path = FILE_DIRECTORY
+files = [os.path.join(FILE_DIRECTORY, f) for f in os.listdir(FILE_DIRECTORY)]
 
 if not os.path.exists(path):
     pass

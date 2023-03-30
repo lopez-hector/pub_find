@@ -2,7 +2,7 @@
 """
 Copyright (c) 2019 - present AppSeed.us
 """
-from flask import render_template, request, session, redirect, url_for, Blueprint
+from flask import render_template, request, redirect, url_for
 from jinja2 import TemplateNotFound
 from apps.home import blueprint
 import os
@@ -29,12 +29,12 @@ def index():
     render_args = {'none': 'none'}
 
     if request.method == 'POST':
-        from main import get_model, embed_queries, get_answers
+        from src.main import get_model, embed_queries, get_answers
 
         queries = [request.form['user_query']]
 
         print('embedding')
-        model = get_model(MODEL_ROOT)
+        model = get_model()
         question_embeddings = embed_queries(queries, model)
         del model
         print(queries)
