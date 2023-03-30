@@ -133,11 +133,12 @@ dmypy.json
 
 *.xml
 
-# pdf storage
-pdfs/
 
 # pkl files
 *.pkl
 
 # Instructor Model
 instructorXL_model
+
+# test directories
+/appel/
