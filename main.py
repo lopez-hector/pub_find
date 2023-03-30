@@ -17,6 +17,12 @@ INDEX_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'index')
 MODEL_ROOT = './instructorXL_model'
 # assume that doc-citations map exists
 """
+* we have embeddings that must be hosted
+    - 100 files, 24 MB Embeddings
+    - 19 MB index
+    - 6.5 MB docs object
+    - 26 kb citations json
+    - 288 MB for pdfs
 1. embed documents
     a. store embeddings
 
@@ -149,6 +155,7 @@ def compare_object_with_dir(docs):
 
 def update_embeddings(docs):
     embedding_files_to_add = compare_object_with_dir(docs)
+    citations = json.load(open(CITATIONS_FILE, 'r'))
 
     if len(embedding_files_to_add) == 0:
         print('Docstore is up to date')
@@ -171,6 +178,10 @@ def update_embeddings(docs):
             file_embeddings = processed_file[1]
             # todo add opportunity to update the citation here.
             metadatas = processed_file[2]  # dict(citation=citation, dockey= key, key=f"{key} pages {pg}",)
+
+            for metadata in metadatas:
+                metadata['citation'] = citations[docs_filepath + '.pdf']
+
             num_tokens = processed_file[3]
 
             if len(metadatas[-1].keys()) < 3:
@@ -188,7 +199,7 @@ def update_embeddings(docs):
         return
 
 
-def initialize_docstore():
+def initialize_docstore(force_rebuild=False):
     # get list of files in directory that holds files to embed
     files_to_embed, files_removed_bool = files_for_search(FILE_DIRECTORY)
     print(files_to_embed)
@@ -208,7 +219,7 @@ def initialize_docstore():
 
     # generate Doc or load Doc
     # if doc exists and we havent removed any files load the doc object
-    if os.path.exists(DOCS_FILE) and not files_removed_bool:
+    if os.path.exists(DOCS_FILE) and not files_removed_bool and not force_rebuild:
         print('Loading DOCS')
         with open(DOCS_FILE, 'rb') as fb:
             docs = pickle.load(fb)
@@ -246,25 +257,35 @@ def embed_queries(queries, model):
     return question_embeddings
 
 
-def main():
+def get_answers(docs, queries, question_embeddings):
+    answers = []
+    length_prompt = 'about 50 words'
+    for query, embedding in zip(queries, question_embeddings):
+        answers.append(docs.query(query, embedding=embedding, length_prompt=length_prompt, k=5))
+
+    return answers
+
+
+def main(force_rebuild=False):
 
     # create a docstore that stays updated with the filesystem
     # it is rebuilt if pdfs are deleted and items are added when new files are detected
-    docs, model = initialize_docstore()
+    docs, model = initialize_docstore(force_rebuild=force_rebuild)
 
     queries = ['How to prevent wildfires using hydrogels?']
 
+    print('embedding')
     if not model:
         model = get_model(MODEL_ROOT)
     question_embeddings = embed_queries(queries, model)
 
-    answers = []
-    length_prompt = 'about 50 words'
-    for query, embedding in zip(queries, question_embeddings):
-        answers.append(docs.query(query, embedding=embedding, length_prompt=length_prompt))
+    print('getting answers')
+    answers = get_answers(docs, queries, question_embeddings)
 
     for answer in answers:
         print(answer.formatted_answer)
 
 
-main()
+docs, model = initialize_docstore()
+print(len(docs.docs))
+# main(force_rebuild=True)

@@ -2,44 +2,57 @@
 """
 Copyright (c) 2019 - present AppSeed.us
 """
-import sys
-import base64
-import io
-
-import pandas as pd
-from flask import render_template, request, session
-import flask_login
-from flask_login import login_required
+from flask import render_template, request, session, redirect, url_for, Blueprint
 from jinja2 import TemplateNotFound
-from apps.app_utils import append_query
 from apps.home import blueprint
-from apps.chartjs_utils import grab_plot_and_data
-import json
-import random
+import os
+import pickle
+
+ROOT_DIRECTORY = './appel'
+FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
+EMB_DIR = os.path.join(ROOT_DIRECTORY, 'embeddings')
+CITATIONS_FILE = os.path.join(ROOT_DIRECTORY, 'citations.json')
+DOCS_FILE = os.path.join(ROOT_DIRECTORY, 'docs')
+INDEX_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'index')
+MODEL_ROOT = './instructorXL_model'
 
 
-@blueprint.route('/home', methods=['POST', 'GET'])
-def home():
-    print("Home Page!!!")
-    print(request)
-    render_args = {}
-    return render_template('home/home.html', **render_args)
+@blueprint.route('/', methods=['POST', 'GET'])
+def route_to_index():
+    return redirect(url_for('home_blueprint.index'))
 
 
 @blueprint.route('/index', methods=['POST', 'GET'])
-# @login_required
 def index():
+    docs = pickle.load(open(DOCS_FILE, 'rb'))
 
-    render_args = {'segment': 'index',
-                   }
+    render_args = {'none': 'none'}
 
     if request.method == 'POST':
+        from main import get_model, embed_queries, get_answers
 
-            mod_render_args = {'segment': 'index',
-                               }
-            mod_render_args = render_args | mod_render_args
+        queries = [request.form['user_query']]
 
-            return render_template('home/index.html', **mod_render_args)
+        print('embedding')
+        model = get_model(MODEL_ROOT)
+        question_embeddings = embed_queries(queries, model)
+        del model
+        print(queries)
+        print('getting answers')
+        answers = get_answers(docs, queries, question_embeddings)
+
+        print(answers[0].formatted_answer)
+
+        mod_render_args = {'text_ans': answers[0].answer,
+                           'question': queries[0],
+                           'references': answers[0].references,
+                           'context_ids': list(answers[0].passages.keys()),
+                           'contexts': list(answers[0].passages.values())}
+
+        for k in mod_render_args:
+            render_args[k] = mod_render_args[k]
+
+        return render_template('home/index.html', **mod_render_args)
 
     return render_template('home/index.html', **render_args)
 

@@ -294,7 +294,7 @@ class Docs:
                 )
             else:
                 docs = self._faiss_index.max_marginal_relevance_search_by_vector(
-                    answer.question, k=_k, fetch_k=5 * _k
+                    answer.question_embedding, k=_k, fetch_k=5 * _k
                 )
         else:
             docs = self._faiss_index.similarity_search(
