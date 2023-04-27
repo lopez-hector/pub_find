@@ -6,16 +6,19 @@ import re
 from paperqa import readers, Docs
 import pickle
 
-ROOT_DIRECTORY = './appel'
+ROOT_DIRECTORY = os.environ['ROOT_DIRECTORY']
+MODEL_ROOT = os.environ['MODEL_ROOT']
+
 FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
 EMB_DIR = os.path.join(ROOT_DIRECTORY, 'embeddings')
 CITATIONS_FILE = os.path.join(ROOT_DIRECTORY, 'citations.json')
 DOCS_FILE = os.path.join(ROOT_DIRECTORY, 'docs')
 INDEX_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'index')
-MODEL_ROOT = './instructorXL_model'
 
 
 def get_model():
+    from langchain.llms import LlamaCpp
+
     # model_path = os.path.join(model_root, 'model.bin')
     # if not os.path.exists(model_path):
     #     print('getting_model')
@@ -130,6 +133,10 @@ def compare_object_with_dir(docs):
 
 
 def update_embeddings(docs):
+    """
+    compare Docs contents with directory
+    - add embeddings to docstore if needed
+    """
     embedding_files_to_add = compare_object_with_dir(docs)
     citations = json.load(open(CITATIONS_FILE, 'r'))
 
@@ -176,9 +183,10 @@ def update_embeddings(docs):
 
 
 def initialize_docstore(force_rebuild=False):
-    # get list of files in directory that holds files to embed
+    # compare pdf files with embedding pkl files. If they don't match we can add or remove files
     files_to_embed, files_removed_bool = files_for_search(FILE_DIRECTORY)
     print(files_to_embed)
+
     # embed files
     if files_to_embed:
         print('Embedding')
@@ -240,4 +248,3 @@ def get_answers(docs, queries, question_embeddings):
         answers.append(docs.query(query, embedding=embedding, length_prompt=length_prompt, k=5))
 
     return answers
-

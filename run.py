@@ -1,3 +1,8 @@
+import os
+
+os.environ['ROOT_DIRECTORY'] = './appel'
+os.environ['MODEL_ROOT'] = './instructorXL_model'
+
 from src.main import initialize_docstore, get_model, get_answers, embed_queries
 
 
