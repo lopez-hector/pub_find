@@ -14,7 +14,8 @@ from flask import render_template, request, redirect, url_for
 from jinja2 import TemplateNotFound
 from apps.home import blueprint
 import os
-from src.main import get_model, embed_queries, get_answers, initialize_docstore
+from src.main import get_model, get_answers, initialize_docstore
+from src.embedding_utils import embed_queries
 
 FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
 EMB_DIR = os.path.join(ROOT_DIRECTORY, 'embeddings')
@@ -26,6 +27,13 @@ INDEX_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'index')
 @blueprint.route('/', methods=['POST', 'GET'])
 def route_to_index():
     return redirect(url_for('home_blueprint.index'))
+
+
+def get_question_embeddings(queries):
+    model = get_model()
+    question_embeddings = embed_queries(queries, model)
+
+    return question_embeddings
 
 
 @blueprint.route('/index', methods=['POST', 'GET'])
@@ -40,9 +48,8 @@ def index():
         queries = [request.form['user_query']]
 
         print('embedding')
-        model = get_model()
-        question_embeddings = embed_queries(queries, model)
-        del model
+        question_embeddings = get_question_embeddings(queries)
+        # del model
         print(queries)
         print('getting answers')
         answers = get_answers(docs, queries, question_embeddings)

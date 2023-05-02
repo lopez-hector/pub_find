@@ -17,21 +17,6 @@ INDEX_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'index')
 
 
 def get_model():
-    from langchain.llms import LlamaCpp
-
-    # model_path = os.path.join(model_root, 'model.bin')
-    # if not os.path.exists(model_path):
-    #     print('getting_model')
-    #     model = INSTRUCTOR('hkunlp/instructor-xl', cache_folder=model_root)
-    # else:
-    #     model = SentenceTransformer(model_path)
-    #
-    # tokenizer_path = os.path.join(model_root, 'tokenizer.bin')
-    # if not os.path.exists(tokenizer_path):
-    #     print('getting_tokenizer')
-    #     tokenizer = transformers.AutoTokenizer.from_pretrained("hkunlp/instructor-xl", cache_dir=model_root)
-    # else:
-    #     tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path)
 
     model = INSTRUCTOR('hkunlp/instructor-xl', cache_folder=MODEL_ROOT)
 
@@ -228,17 +213,6 @@ def update_filnames():
         new_path = os.path.join(EMB_DIR, f[:-15] + '.pkl')
         # print(new_path)
         os.rename(old_path, new_path)
-
-
-def embed_queries(queries, model):
-    question_embeddings = []
-
-    for question in queries:
-        question = 'Represent the scientific query for retrieving supporting documents; Input: ' + question
-        embeds = model.encode(question)
-        question_embeddings.append(embeds)
-
-    return question_embeddings
 
 
 def get_answers(docs, queries, question_embeddings):
