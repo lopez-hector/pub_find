@@ -8,3 +8,5 @@ def embed_queries(queries, model):
         question_embeddings.append(embeds)
 
     return question_embeddings
+
+
