@@ -16,6 +16,7 @@ from apps.home import blueprint
 import os
 from src.main import get_model, get_answers, initialize_docstore
 from src.embedding_utils import embed_queries
+import modal
 
 FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
 EMB_DIR = os.path.join(ROOT_DIRECTORY, 'embeddings')
@@ -48,7 +49,8 @@ def index():
         queries = [request.form['user_query']]
 
         print('embedding')
-        question_embeddings = get_question_embeddings(queries)
+        f = modal.Function.lookup("PubFind_2", "get_question_embedding")
+        question_embeddings = f.call(queries, MODEL_ROOT)
         # del model
         print(queries)
         print('getting answers')
