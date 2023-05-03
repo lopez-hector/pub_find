@@ -133,10 +133,6 @@ dmypy.json
 
 *.xml
 
-
-# pkl files
-*.pkl
-
 # Instructor Model
 instructorXL_model
 
