@@ -82,20 +82,33 @@ def get_input_tokens(list_of_filenames, model='text-embedding-ada-002'):
     return total_tokens, docs_processed
 
 
-from .qaprompts import citation_prompt
+
 from langchain.llms import OpenAI, OpenAIChat
 
 
 def get_citations(list_of_filenames):
-    chat_pref = [
-        {
-            "role": "system",
-            "content": "You are a scholarly researcher that answers in an unbiased, scholarly tone. "
-                       "You sometimes refuse to answer if there is insufficient information.",
-        }
-    ]
-    llm = OpenAIChat(temperature=0.1, max_tokens=512, prefix_messages=chat_pref, model_name='gpt-3.5-turbo')
-    cite_chain = LLMChain(prompt=citation_prompt, llm=llm)
+
+    from langchain.prompts.chat import HumanMessagePromptTemplate, ChatPromptTemplate, \
+        SystemMessagePromptTemplate, SystemMessage
+
+    system_message = SystemMessage(content="You are a scholarly researcher that answers in an unbiased, scholarly tone."
+                                           "You sometimes refuse to answer if there is insufficient information.")
+
+    citation_prompt = HumanMessagePromptTemplate.from_template(
+        "Return a possible citation for the following text. Do not include URLs. "
+        "Citation should be in MLA format. Do not summarize"
+        "the text. Only return the citation with the DOI.\n"
+
+        "text: {text}\n\n"
+        "Citation:"
+        "If a citation cannot be determined from the text return None."
+    )
+
+    llm = OpenAIChat(temperature=0.1, max_tokens=512, model_name='gpt-3.5-turbo')
+
+    chat_prompt = ChatPromptTemplate.from_messages([system_message, citation_prompt])
+    cite_chain = LLMChain(prompt=chat_prompt, llm=llm)
+
     # peak first chunk
     path_citation = {}
     for path in list_of_filenames:
