@@ -4,6 +4,7 @@ from importlib import import_module
 
 db = SQLAlchemy()
 
+
 def register_extensions(app):
     db.init_app(app)
 
@@ -15,7 +16,6 @@ def register_blueprints(app):
 
 
 def configure_database(app):
-
     @app.before_first_request
     def initialize_database():
         db.create_all()

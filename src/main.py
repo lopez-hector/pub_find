@@ -187,12 +187,12 @@ def initialize_docstore(force_rebuild=False):
         assert (len(remaining_files) == 0)
 
     # generate Doc or load Doc
-    # if doc exists and we havent removed any files load the doc object
+    # if doc exists, and we haven't removed any files load the doc object
     if os.path.exists(DOCS_FILE) and not files_removed_bool and not force_rebuild:
         print('Loading DOCS')
         with open(DOCS_FILE, 'rb') as fb:
             docs = pickle.load(fb)
-    else:  # if doc doesnt exist or we have removed files create a new instance of the object
+    else:  # if doc doesn't exist, or we have removed files create a new instance of the object
         print('creating new DOCS')
         docs = Docs(index_path=INDEX_DIRECTORY)
 
@@ -207,7 +207,7 @@ def initialize_docstore(force_rebuild=False):
         return docs, None
 
 
-def update_filnames():
+def update_filenames():
     for f in os.listdir(EMB_DIR):
         old_path = os.path.join(EMB_DIR, f)
         new_path = os.path.join(EMB_DIR, f[:-15] + '.pkl')

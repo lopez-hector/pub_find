@@ -23,11 +23,12 @@ except KeyError:
 
 app = create_app(app_config)
 Migrate(app, db)
-if os.environ['DEBUG'] is False:
-    Talisman(app, content_security_policy=None)
 
-if not DEBUG:
-    Minify(app=app, html=True, js=False, cssless=False)
+# if os.environ['DEBUG'] is False:
+#     Talisman(app, content_security_policy=None)
+
+# if not DEBUG:
+Minify(app=app, html=True, js=False, cssless=False)
 
 if DEBUG:
     app.logger.info('DEBUG            = ' + str(DEBUG))
