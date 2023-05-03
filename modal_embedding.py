@@ -1,4 +1,7 @@
 import os
+import torch.cuda
+from modal import Image, SharedVolume, Stub
+
 ROOT_DIRECTORY = './appel'
 MODEL_ROOT = './instructorXL_model'
 
@@ -9,10 +12,6 @@ ROOT_DIRECTORY = os.environ['ROOT_DIRECTORY']
 MODEL_ROOT = os.environ['MODEL_ROOT']
 FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
 EMB_DIR = os.path.join(ROOT_DIRECTORY, 'embeddings')
-
-import torch.cuda
-from modal import Image, SharedVolume, Stub
-
 
 stub = Stub("PubFind_2")
 
@@ -44,7 +43,6 @@ def get_question_embedding(queries, model_root):
 
     print('Have embeddings')
     return question_embeddings
-
 
 # @stub.function(gpu="A10G",
 #                image=PubFind_image,
@@ -81,4 +79,3 @@ def get_question_embedding(queries, model_root):
 #
 #         with open(path, 'wb') as f:
 #             pickle.dump(save_dict, f)
-

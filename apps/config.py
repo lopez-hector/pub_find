@@ -5,8 +5,8 @@ Copyright (c) 2019 - present AppSeed.us
 
 import os
 
-class Config(object):
 
+class Config(object):
     basedir = os.path.abspath(os.path.dirname(__file__))
 
     # Set up the App SECRET_KEY. NECESSARY TO RUN SESSIONS
@@ -18,8 +18,9 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     LOGIN_DISABLED = True
     # Assets Management
-    ASSETS_ROOT = os.getenv('ASSETS_ROOT', '/static/assets')    
-    
+    ASSETS_ROOT = os.getenv('ASSETS_ROOT', '/apps/static/assets')
+
+
 class ProductionConfig(Config):
     DEBUG = False
     os.environ['DEBUG'] = 'False'
@@ -37,8 +38,9 @@ class ProductionConfig(Config):
     #    os.getenv('DB_HOST'     , 'localhost'),
     #    os.getenv('DB_PORT'     ,s 3306),
     #    os.getenv('DB_NAME'     , 'appseed_db')
-    #)
-    SQLALCHEMY_DATABASE_URI = "postgresql://"
+    # )
+    # SQLALCHEMY_DATABASE_URI = "postgresql://"
+
 
 class DebugConfig(Config):
     DEBUG = True
@@ -47,5 +49,5 @@ class DebugConfig(Config):
 # Load all possible configurations
 config_dict = {
     'Production': ProductionConfig,
-    'Debug'     : DebugConfig
+    'Debug': DebugConfig
 }
