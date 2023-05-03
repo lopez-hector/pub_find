@@ -242,7 +242,6 @@ instructorXL_model
 /testvenv/share/doc/networkx-3.0/examples/graph/README.txt
 /testvenv/share/doc/networkx-3.0/examples/subclass/README.txt
 /testvenv/share/doc/networkx-3.0/examples/README.txt
-/requirements.txt
 /testvenv/share/doc/networkx-3.0/examples/graph/roget_dat.txt.gz
 /testvenv/bin/sacremoses
 /testvenv/bin/torchrun
