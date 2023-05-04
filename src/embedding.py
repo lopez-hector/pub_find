@@ -1,27 +1,49 @@
-import os
 import torch.cuda
+import modal
 from modal import Image, SharedVolume, Stub
 
-ROOT_DIRECTORY = './appel'
-MODEL_ROOT = './instructorXL_model'
+MODAL_DEPLOYMENT = 'PubFind'
 
-os.environ['ROOT_DIRECTORY'] = ROOT_DIRECTORY
-os.environ['MODEL_ROOT'] = MODEL_ROOT
+CACHE_PATH = '/root/instructorXL_model'
 
-ROOT_DIRECTORY = os.environ['ROOT_DIRECTORY']
-MODEL_ROOT = os.environ['MODEL_ROOT']
-FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
-EMB_DIR = os.path.join(ROOT_DIRECTORY, 'embeddings')
-
-stub = Stub("PubFind_2")
+stub = Stub(MODAL_DEPLOYMENT)
 
 # *create_package_mounts(["ControlNet"]),
-volume = SharedVolume().persist("PubFind")
+volume = SharedVolume().persist(MODAL_DEPLOYMENT + '_volume')
+
+pdfs_cache = '/root/volume'
+
+
+@stub.function()
+def add_pdfs_to_embed(file_paths):
+    vol = modal.SharedVolume.lookup(MODAL_DEPLOYMENT + '_volume')
+    for file_path in file_paths:
+        vol.add_local_file(local_path=file_path, remote_path='/pdfs_to_embed/')
+
+
+add_pdfs_to_embed(['/Users/hectorlopezhernandez/PycharmProjects/pub_find/appel/pdfs/Appel_ACIE_2012.pdf'])
+
+
+def delete_pdfs_after_embedding(file_paths):
+    modal.shared_volume.SharedVolumeHandle.remove_file(remote_path='/root/pdfs_to_embed/')
+
 
 PubFind_image = Image.debian_slim() \
     .pip_install("transformers", "InstructorEmbedding", "torch", "sentence-transformers")
 
-CACHE_PATH = '/root/instructorXL_model'
+
+def embed_questions(queries, model_root, use_modal='false'):
+    if use_modal.lower() == 'true':
+        print('Using MODAL')
+        f = modal.Function.lookup(MODAL_DEPLOYMENT, "get_question_embedding")
+        question_embeddings = f.call(queries, model_root)
+    else:
+        print('Using Local Machine')
+        question_embeddings = get_question_embedding(queries, model_root)
+
+    return question_embeddings
+
+    return wrapper
 
 
 @stub.function(gpu="A10G",

@@ -3,7 +3,7 @@ import string
 from tqdm import tqdm
 from langchain.chains import LLMChain
 import os, datetime
-
+from langchain.prompts.chat import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessage
 
 def maybe_is_text(s, thresh=2.5):
     if len(s) == 0:
@@ -82,14 +82,12 @@ def get_input_tokens(list_of_filenames, model='text-embedding-ada-002'):
     return total_tokens, docs_processed
 
 
-
 from langchain.llms import OpenAI, OpenAIChat
+
+print('updated')
 
 
 def get_citations(list_of_filenames):
-
-    from langchain.prompts.chat import HumanMessagePromptTemplate, ChatPromptTemplate, \
-        SystemMessagePromptTemplate, SystemMessage
 
     system_message = SystemMessage(content="You are a scholarly researcher that answers in an unbiased, scholarly tone."
                                            "You sometimes refuse to answer if there is insufficient information.")
@@ -112,9 +110,9 @@ def get_citations(list_of_filenames):
     # peak first chunk
     path_citation = {}
     for path in list_of_filenames:
-        texts, _ = parse_pdf(path, "", "", chunk_chars=500, peak=True)
+        texts, _ = parse_pdf(path, "", "", chunk_chars=5000, peak=True)
         print(texts, '\n')
-        citation = cite_chain.run(texts)
+        citation = cite_chain.run(text=texts)
 
         if len(citation) < 3 or "Unknown" in citation or "insufficient" in citation:
             citation = f"Unknown, {os.path.basename(path)}, {datetime.now().year}"

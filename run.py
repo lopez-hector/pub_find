@@ -4,11 +4,11 @@ os.environ['ROOT_DIRECTORY'] = './appel'
 os.environ['MODEL_ROOT'] = MODEL_ROOT = './instructorXL_model'
 
 from src.main import initialize_docstore, get_answers
-import modal_embedding
+from src.embedding import embed_questions
 import modal
 
 
-def main(question, force_rebuild=False):
+def main(question, force_rebuild=False, use_modal=True):
     # create a docstore that stays updated with the filesystem
     # it is rebuilt if pdfs are deleted and items are added when new files are detected
     docs, model = initialize_docstore(force_rebuild=force_rebuild)
@@ -16,14 +16,7 @@ def main(question, force_rebuild=False):
     queries = [question]
 
     print('embedding')
-    # if not model:
-    #     with stub.run():
-    #         model = modal_get_model.call(model_root=MODEL_ROOT)
-    #
-    # question_embeddings = embed_queries(queries, model)
-
-    f = modal.Function.lookup("PubFind_2", "get_question_embedding")
-    question_embeddings = f.call(queries, MODEL_ROOT)
+    question_embeddings = embed_questions(queries, MODEL_ROOT, use_modal=os.environ['MODAL'])
 
     print('getting answers')
     answers = get_answers(docs, queries, question_embeddings)

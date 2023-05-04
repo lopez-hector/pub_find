@@ -1,12 +1,7 @@
-# -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
 import os
 
 ROOT_DIRECTORY = './appel'
 MODEL_ROOT = './instructorXL_model'
-
 os.environ['ROOT_DIRECTORY'] = ROOT_DIRECTORY
 os.environ['MODEL_ROOT'] = MODEL_ROOT
 
@@ -15,7 +10,7 @@ from jinja2 import TemplateNotFound
 from apps.home import blueprint
 import os
 from src.main import get_model, get_answers, initialize_docstore
-from src.embedding_utils import embed_queries
+from src.embedding import embed_questions
 import modal
 
 FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
@@ -30,13 +25,6 @@ def route_to_index():
     return redirect(url_for('home_blueprint.index'))
 
 
-def get_question_embeddings(queries):
-    model = get_model()
-    question_embeddings = embed_queries(queries, model)
-
-    return question_embeddings
-
-
 @blueprint.route('/index', methods=['POST', 'GET'])
 def index():
     # grab docs if exists, update if pdfs added/deleted, initialize if doesn't exist
@@ -49,8 +37,8 @@ def index():
         queries = [request.form['user_query']]
 
         print('embedding')
-        f = modal.Function.lookup("PubFind_2", "get_question_embedding")
-        question_embeddings = f.call(queries, MODEL_ROOT)
+        question_embeddings = embed_questions(queries, MODEL_ROOT, use_modal=os.environ['MODAL'])
+
         # del model
         print(queries)
         print('getting answers')
