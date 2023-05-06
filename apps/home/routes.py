@@ -1,17 +1,15 @@
 import os
 
 ROOT_DIRECTORY = './appel'
-MODEL_ROOT = './instructorXL_model'
+
 os.environ['ROOT_DIRECTORY'] = ROOT_DIRECTORY
-os.environ['MODEL_ROOT'] = MODEL_ROOT
 
 from flask import render_template, request, redirect, url_for
 from jinja2 import TemplateNotFound
 from apps.home import blueprint
 import os
-from src.main import get_model, get_answers, initialize_docstore
+from src.utils import get_model, get_answers, initialize_docstore
 from src.embedding import embed_questions
-import modal
 
 FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
 EMB_DIR = os.path.join(ROOT_DIRECTORY, 'embeddings')
@@ -28,7 +26,7 @@ def route_to_index():
 @blueprint.route('/index', methods=['POST', 'GET'])
 def index():
     # grab docs if exists, update if pdfs added/deleted, initialize if doesn't exist
-    docs, model = initialize_docstore(force_rebuild=True)
+    docs = initialize_docstore(force_rebuild=True)
 
     render_args = {'none': 'none'}
 
@@ -37,7 +35,7 @@ def index():
         queries = [request.form['user_query']]
 
         print('embedding')
-        question_embeddings = embed_questions(queries, MODEL_ROOT, use_modal=os.environ['MODAL'])
+        question_embeddings = embed_questions(queries, use_modal=os.environ['MODAL'])
 
         # del model
         print(queries)

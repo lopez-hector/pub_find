@@ -1,22 +1,24 @@
 import os
 
-os.environ['ROOT_DIRECTORY'] = './appel'
-os.environ['MODEL_ROOT'] = MODEL_ROOT = './instructorXL_model'
+# Set directory for target documents
+os.environ['ROOT_DIRECTORY'] = './test'
 
-from src.main import initialize_docstore, get_answers
+from src.utils import initialize_docstore, get_answers
 from src.embedding import embed_questions
-import modal
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def main(question, force_rebuild=False, use_modal=True):
     # create a docstore that stays updated with the filesystem
     # it is rebuilt if pdfs are deleted and items are added when new files are detected
-    docs, model = initialize_docstore(force_rebuild=force_rebuild)
+    docs = initialize_docstore(force_rebuild=force_rebuild)
 
     queries = [question]
 
     print('embedding')
-    question_embeddings = embed_questions(queries, MODEL_ROOT, use_modal=os.environ['MODAL'])
+    question_embeddings = embed_questions(queries, use_modal=os.environ['MODAL'])
 
     print('getting answers')
     answers = get_answers(docs, queries, question_embeddings)

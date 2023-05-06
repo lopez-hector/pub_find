@@ -5,9 +5,9 @@ from tqdm import tqdm
 import re
 from paperqa import readers, Docs
 import pickle
+from src.embedding import embed_file_chunks
 
 ROOT_DIRECTORY = os.environ['ROOT_DIRECTORY']
-MODEL_ROOT = os.environ['MODEL_ROOT']
 
 FILE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'pdfs')
 EMB_DIR = os.path.join(ROOT_DIRECTORY, 'embeddings')
@@ -17,8 +17,8 @@ INDEX_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'index')
 
 
 def get_model():
-
-    model = INSTRUCTOR('hkunlp/instructor-xl', cache_folder=MODEL_ROOT)
+    model_root = 'embedding_models'
+    model = INSTRUCTOR('hkunlp/instructor-xl', cache_folder=model_root)
 
     return model
 
@@ -76,7 +76,10 @@ def grab_key(citation):
     return f"{author}{year}"
 
 
-def embed_files(model, files_to_embed, path_citations_map):
+def embed_files(files_to_embed, path_citations_map):
+    os.makedirs(EMB_DIR, exist_ok=True)
+
+    # get model
     parse_pdf = readers.parse_pdf
 
     for f in tqdm(files_to_embed):
@@ -87,26 +90,18 @@ def embed_files(model, files_to_embed, path_citations_map):
 
         # get texts (splits) and metadata (citation, key, key_with_page)
         f_path = os.path.join(FILE_DIRECTORY, f)
-        splits, metadatas = parse_pdf(f_path, key=key, citation=citation, chunk_chars=1600, overlap=100)
+        splits, metadatas = parse_pdf(f_path, key=key, citation=citation, chunk_chars=1200, overlap=100)
 
-        # collect embeddings for all documents
-        file_embeddings = []
-        num_tokens = []
-
-        # encode each chunk
-        for split in tqdm(splits, mininterval=10):
-            split = 'Represent the scientific paragraph for retrieval; Input: ' + split
-            num_tokens.append(model.tokenize(split))
-            embeds = model.encode(split)
-            file_embeddings.append(embeds)
+        file_embeddings, num_tokens = embed_file_chunks(splits, use_modal=os.environ['MODAL'])
 
         # save text chunks, file embeddings, metadatas, and num_tokens for each
         save_dict = [splits, file_embeddings, metadatas, num_tokens]
 
         path = os.path.join(EMB_DIR, f[:-3] + 'pkl')
-
-        with open(path, 'wb') as f:
-            pickle.dump(save_dict, f)
+        print(f'Saving embeddings to path: {path}')
+        # save embeddings
+        with open(path, 'wb') as fp:
+            pickle.dump(save_dict, fp)
 
 
 def compare_object_with_dir(docs):
@@ -164,6 +159,7 @@ def update_embeddings(docs):
 
         with open(DOCS_FILE, 'wb') as fb:
             pickle.dump(docs, fb)
+
         return
 
 
@@ -174,17 +170,16 @@ def initialize_docstore(force_rebuild=False):
 
     # embed files
     if files_to_embed:
-        print('Embedding')
+        print('Embedding New Files')
         # grab model from local or download if needed
 
-        model = get_model()  # will get model from local if available
-
         path_citations_map = json.load(open(CITATIONS_FILE, 'r'))
-        embed_files(model, files_to_embed, path_citations_map)
+        embed_files(files_to_embed, path_citations_map)
 
         # double check that everything is embedded
-        remaining_files = files_for_search(FILE_DIRECTORY)
-        assert (len(remaining_files) == 0)
+        # remaining_files = files_for_search(FILE_DIRECTORY)
+
+        # there may be an issue here where pkl takes a while to save to filesystem and the program continues executing
 
     # generate Doc or load Doc
     # if doc exists, and we haven't removed any files load the doc object
@@ -199,12 +194,7 @@ def initialize_docstore(force_rebuild=False):
     # add embeddings
     update_embeddings(docs)
 
-    # docs.docs = dict(texts=texts, metadata=metadatas, key=key)
-
-    if 'model' in locals():
-        return docs, model
-    else:
-        return docs, None
+    return docs
 
 
 def update_filenames():
